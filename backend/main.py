@@ -3,14 +3,17 @@ from pathlib import Path
 import shutil
 import asyncio
 
+
+
 from digesting import digest_directory
-from graph import send_chunks_to_graph
+from vectorizer import add_chunks_to_qdrant
 
 app = FastAPI()
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 fileCounter = 0
+
 
 
 @app.get("/")
@@ -40,16 +43,31 @@ async def upload_course(file: UploadFile = File(...)):
         zip_ref.extractall(target_dir)
     upload_path.unlink()  # remove zip
 
-    chunks = digest_directory(target_dir)
+    chunks = digest_directory(target_dir, chunk_pdf_by_page=True)
 
     print(f"\n\n\nExtracted {len(chunks)} chunks from uploaded course.\n\n\n\n")
 
     # Send chunks to Graphiti
-    await send_chunks_to_graph(chunks, source_description=f"Upload ID {fileCounter}")
+    await add_chunks_to_qdrant(chunks)
 
     fileCounter += 1
 
     return {"upload_id": fileCounter - 1, "chunks_added": len(chunks)}
+
+
+@app.get("/test-upload/")
+async def test_upload():
+    """
+    Test route to upload some dummy chunks to Graphiti
+    without uploading a file.
+    """
+    dummy_chunks = [
+        "This is a test chunk about AI.",
+        "Graphiti is a graph database for structured knowledge.",
+        "FastAPI allows asynchronous endpoints easily."
+    ]
+    await add_chunks_to_qdrant(dummy_chunks)
+    return {"message": "Dummy chunks uploaded to Graphiti", "chunks_added": len(dummy_chunks)}
 
 
 if __name__ == "__main__":

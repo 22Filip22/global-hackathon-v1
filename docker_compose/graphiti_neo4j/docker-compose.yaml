@@ -1,25 +1,18 @@
-version: '3.8'
+# docker-compose.yml
+version: "3.9"
 
 services:
-  neo4j:
-    image: neo4j:5.26
-    container_name: neo4j
-    environment:
-      # Simple test credentials (change for any real use)
-      - NEO4J_AUTH=neo4j/testpassword
-      # Accept license if needed, enable common plugins for convenience
-      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
     ports:
-      - "7474:7474"   # Neo4j HTTP / Browser
-      - "7687:7687"   # Bolt
+      - "6333:6333"      # HTTP API
+      - "6334:6334"      # gRPC API (optional)
     volumes:
-      - neo4j_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7474"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__LOG_LEVEL=info
 
 volumes:
-  neo4j_data:
+  qdrant_storage:
