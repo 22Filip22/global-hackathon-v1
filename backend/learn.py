@@ -6,7 +6,7 @@ import random
 # --- Configuration ---
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
-COLLECTION_NAME = "graph_nodes"
+COLLECTION_NAME = "knowledge"  # Use the same collection as in vectorizer.py
 OLLAMA_MODEL = "gemma3:4b"  # Chat model for Socratic questions
 
 # --- Qdrant client ---
@@ -22,11 +22,11 @@ if not client.collection_exists(COLLECTION_NAME):
 # --- Utilities ---
 def get_random_node_from_db():
     """Pick a random node from Qdrant and return its payload."""
-    result = client.scroll(collection_name=COLLECTION_NAME, limit=1000)
-    all_points = result.points
-    if not all_points:
+    # scroll() returns a tuple (points, next_page)
+    points, _ = client.scroll(collection_name=COLLECTION_NAME, limit=1000)
+    if not points:
         raise ValueError("Qdrant collection is empty. Add nodes first.")
-    random_point = random.choice(all_points)
+    random_point = random.choice(points)
     return random_point.payload["node"], random_point.payload["neighbors"]
 
 def socratic_question(node, neighbors):
@@ -61,7 +61,7 @@ def explore_graph():
                 # Move to selected neighbor
                 current_node = next_node
                 # Fetch neighbors from Qdrant
-                points = client.scroll(collection_name=COLLECTION_NAME, limit=1000).points
+                points, _ = client.scroll(collection_name=COLLECTION_NAME, limit=1000)
                 for p in points:
                     if p.payload["node"] == current_node:
                         neighbors = p.payload["neighbors"]
